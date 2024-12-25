@@ -806,6 +806,21 @@ public class VpnProfileControlActivity extends AppCompatActivity
 			return null;
 		}
 
+		private String getServerCityName(String city, String curKey) {
+			try {
+				// Quick and dirty way to extract server num from hostname
+				int firstDotIdx = curKey.indexOf(".");
+				String serverName = curKey.substring(0, firstDotIdx);
+				String serverNum = serverName.replaceAll("[A-Za-z]", "");
+				if (!serverNum.isEmpty()) {
+					return String.format("%s (%s)", city, serverNum);
+				}
+			} catch (Exception ignored) {
+			}
+
+			return city;
+		}
+
 		@Override
 		protected void onPostExecute(Void v) {
 			// Parse JSON-API data
@@ -844,18 +859,19 @@ public class VpnProfileControlActivity extends AppCompatActivity
 				String globalPassword = dataSource.getSettingPassword();
 
 				while (keys.hasNext()) {
-					String curKey = keys.next();
-					String curServerAddress = curKey.replaceAll("\\d", "");
+					String curServerAddress = keys.next();
 					//Log.i("Json Key", "Server: " + curServerAddress);
 
 					// Since we are ignoring numbers only process every server once
 					if (!processedServers.contains(curServerAddress)) {
 						// Create profile for current server and insert into database
-						JSONObject serverData = jObject.getJSONObject(curKey);
+						JSONObject serverData = jObject.getJSONObject(curServerAddress);
 						processedServers.add(curServerAddress);
 
 						VpnProfile profile = new VpnProfile();
-						profile.setName(serverData.getString("city"));
+						String city = serverData.getString("city");
+						String name = getServerCityName(city, curServerAddress);
+						profile.setName(name);
 						profile.setGateway(curServerAddress);
 						profile.setVpnType(VpnType.IKEV2_EAP);
 						profile.setCertificateAlias("user:ppca");
